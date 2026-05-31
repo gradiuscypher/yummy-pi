@@ -39,24 +39,3 @@ export type ReviewAction =
 	| "stay"       // Stay in plan mode
 	| "abort";     // Exit plan mode entirely
 
-/** Configuration for the extension. */
-export interface PlanBuildConfig {
-	/** Additional safe command patterns (regex strings). */
-	extraSafePatterns: string[];
-	/** Additional blocked command patterns (regex strings). */
-	extraBlockedPatterns: string[];
-	/** Whether to pause between steps during build. */
-	pauseBetweenSteps: boolean;
-	/** Whether to stop on first error. */
-	stopOnError: boolean;
-	/** Maximum plan steps to display in collapsed view. */
-	maxCollapsedSteps: number;
-}
-
-export const DEFAULT_CONFIG: PlanBuildConfig = {
-	extraSafePatterns: [],
-	extraBlockedPatterns: [],
-	pauseBetweenSteps: false,
-	stopOnError: true,
-	maxCollapsedSteps: 10,
-};

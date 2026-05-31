@@ -2,11 +2,13 @@
  * Plan/Build Mode Extension for pi
  *
  * A multi-phase workflow for planning, reviewing, and executing code changes.
+ * Plan mode uses a context prompt to nudge the model toward exploration and
+ * planning only — no tool restrictions.
  *
  * Phases:
- *   1. PLAN   — Read-only exploration. Model creates a numbered plan.
+ *   1. PLAN   — Model explores and creates a numbered plan.
  *   2. REVIEW — Interactive TUI to inspect, edit, and approve plan steps.
- *   3. BUILD  — Full tool access. Model executes steps with progress tracking.
+ *   3. BUILD  — Model executes steps with progress tracking.
  *   4. SUMMARY — Report what was done vs. remaining.
  *
  * Usage:
@@ -24,15 +26,9 @@ import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Key, visibleWidth, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { Phase, PersistedState, PlanStep } from "./types.ts";
-import { isSafeCommand, getBlockReason } from "./safety.ts";
 import { extractPlanSteps, markCompletedSteps, formatSteps, getProgressSummary } from "./plan-parser.ts";
 import { PlanReviewUI } from "./review-ui.ts";
 import type { ReviewResult } from "./review-ui.ts";
-
-// ── Tool sets per phase ────────────────────────────────────────────────
-
-const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "questionnaire"];
-const BUILD_TOOLS = ["read", "bash", "edit", "write", "questionnaire"];
 
 // ── Type guards ─────────────────────────────────────────────────────────
 
@@ -58,8 +54,8 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 	let phase: Phase = "idle";
 	let steps: PlanStep[] = [];
 	let rawPlanText = "";
-	let createdWithinSession = false; // Whether this plan was created in the current session
 	let footerInstalled = false;
+	const pendingReviews = new Set<string>(); // Re-entrancy guard for review UI
 
 	// ── Widget caching ─────────────────────────────────────────────────
 	let widgetRevision = 0;
@@ -361,19 +357,6 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 	 * Notifications are handled by callers.
 	 */
 	function setPhase(newPhase: Phase, ctx: ExtensionContext): void {
-		// Tool configuration per phase
-		// Plan/review: read-only restricted set
-		// Idle/build/summary: all available tools (including questionnaire)
-		switch (newPhase) {
-			case "plan":
-			case "review":
-				pi.setActiveTools(PLAN_TOOLS);
-				break;
-			default:
-				pi.setActiveTools(pi.getAllTools().map((t) => t.name));
-				break;
-		}
-
 		phase = newPhase;
 		updateUI(ctx);
 		persistState();
@@ -416,7 +399,6 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 		if (saved.steps.length > 0) {
 			steps = saved.steps.map((s) => ({ ...s }));
 			rawPlanText = saved.rawPlan;
-			createdWithinSession = false; // restored from disk, not created this session
 		}
 
 		// Check if there's a plan-execute-start entry after the state entry
@@ -484,7 +466,7 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 				"info",
 			);
 		} else {
-			ctx.ui.notify("Plan mode — read-only. Create a detailed plan with numbered steps.", "info");
+			ctx.ui.notify("Plan mode active — explore the codebase and create a numbered plan.", "info");
 		}
 	}
 
@@ -512,7 +494,6 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 		// Clear state BEFORE persisting so we don't write stale data
 		steps = [];
 		rawPlanText = "";
-		createdWithinSession = false;
 
 		// Set idle directly (not through setPhase) so the single persistState
 		// call inside setPhase captures the cleared state in one shot.
@@ -535,6 +516,9 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 		}
 
 		setPhase("review", ctx);
+
+		const originalStepCount = steps.length;
+		const originalEnabledCount = steps.filter((s) => s.enabled).length;
 
 		const reviewResult = await ctx.ui.custom<ReviewResult>((_tui, theme, _kb, done) => {
 			return new PlanReviewUI(steps, theme, done);
@@ -586,13 +570,16 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 			}
 			case "refine": {
 				setPhase("plan", ctx);
-				const count = steps.length;
+				const newCount = steps.length;
+				const newEnabledCount = steps.filter((s) => s.enabled).length;
 				const appliedChanges: string[] = [];
 
-				if (count !== steps.length) appliedChanges.push(`${count} steps (was ${steps.length})`);
-
-				const enabledCount = steps.filter((s) => s.enabled).length;
-				if (enabledCount !== steps.length) appliedChanges.push(`${enabledCount}/${steps.length} enabled`);
+				if (newCount !== originalStepCount) {
+					appliedChanges.push(`${newCount} steps (was ${originalStepCount})`);
+				}
+				if (newEnabledCount !== originalEnabledCount) {
+					appliedChanges.push(`${newEnabledCount}/${newCount} enabled`);
+				}
 
 				const changesNote = appliedChanges.length > 0
 					? ` (changes: ${appliedChanges.join(", ")})`
@@ -768,20 +755,6 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 	// EVENT HOOKS
 	// ══════════════════════════════════════════════════════════════════════
 
-	// ── Block destructive bash commands in plan/review phase ────────────
-	pi.on("tool_call", async (event) => {
-		if ((phase !== "plan" && phase !== "review") || event.toolName !== "bash") return;
-
-		const command = event.input.command as string;
-		if (!isSafeCommand(command)) {
-			const reason = getBlockReason(command);
-			return {
-				block: true,
-				reason: `Plan mode: command blocked.\nReason: ${reason}\n\nUse /plan-build to exit plan mode if you need to run this command.`,
-			};
-		}
-	});
-
 	// ── Filter stale plan context when not in plan mode ──────────────────
 	pi.on("context", async (event) => {
 		if (phase !== "idle") return;
@@ -802,23 +775,7 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 		return {
 			messages: event.messages.filter((m) => {
 				const msg = m as AgentMessage & { customType?: string };
-				if (msg.customType && stripCustomTypes.has(msg.customType)) {
-					return false;
-				}
-				if (msg.role !== "user") return true;
-				const content = msg.content;
-				if (typeof content === "string") {
-					return !content.includes("[PLAN MODE ACTIVE]") && !content.includes("[EXECUTING PLAN");
-				}
-				if (Array.isArray(content)) {
-					return !content.some(
-						(c) =>
-							c.type === "text" &&
-							((c as TextContent).text?.includes("[PLAN MODE ACTIVE]") ||
-								(c as TextContent).text?.includes("[EXECUTING PLAN")),
-					);
-				}
-				return true;
+				return !(msg.customType && stripCustomTypes.has(msg.customType));
 			}),
 		};
 	});
@@ -831,15 +788,10 @@ export default function planBuildExtension(pi: ExtensionAPI): void {
 					customType: "plan-build-context",
 					content: `[PLAN MODE ACTIVE]
 
-You are in **plan mode** — a read-only exploration phase for safe code analysis and planning.
-
-**Restrictions:**
-- Available tools: read, bash, grep, find, ls, questionnaire
-- You CANNOT use: edit, write (file modifications are disabled)
-- Bash commands are restricted to a read-only allowlist
+You are in **plan mode** — a planning phase. Your job is to explore the codebase, ask clarifying questions, and create a detailed implementation plan. Do NOT make any changes yet.
 
 **Your task:**
-1. Explore the codebase to understand the problem
+1. Explore the codebase to understand the problem. Use whatever tools are helpful for reading and searching.
 2. Ask clarifying questions using the **questionnaire** tool. Bundle multiple related questions into one call so the user can answer them all in a tabbed dialog before submitting.
 3. Create a detailed, numbered implementation plan under a "Plan:" header like this:
 
@@ -850,7 +802,7 @@ Plan:
 
 Each step should be a concrete, executable task. Do NOT include sub-steps or nested lists.
 
-**Do NOT make any changes.** Just create the plan. The user will review and approve it before execution.`,
+The user will review and approve the plan before any implementation begins. Wait for confirmation before making any code changes.`,
 					display: false,
 				},
 			};
@@ -864,7 +816,7 @@ Each step should be a concrete, executable task. Do NOT include sub-steps or nes
 			return {
 				message: {
 					customType: "plan-build-execute-context",
-					content: `[EXECUTING PLAN — Full tool access enabled]
+					content: `[EXECUTING PLAN]
 
 **Remaining steps:**
 ${todoList}
@@ -940,7 +892,6 @@ This tracks progress automatically. Only mark steps as DONE when they are fully 
 		// Plan found — save it
 		steps = extracted;
 		rawPlanText = text;
-		createdWithinSession = true;
 		persistState();
 
 		// Show plan summary and prompt for next action
@@ -955,7 +906,14 @@ This tracks progress automatically. Only mark steps as DONE when they are fully 
 		);
 
 		if (ctx.hasUI) {
-			await startReview(ctx as ExtensionCommandContext);
+			const guardKey = `review-${Date.now()}`;
+			if (pendingReviews.size > 0) return;
+			pendingReviews.add(guardKey);
+			try {
+				await startReview(ctx as ExtensionCommandContext);
+			} finally {
+				pendingReviews.delete(guardKey);
+			}
 		}
 	});
 

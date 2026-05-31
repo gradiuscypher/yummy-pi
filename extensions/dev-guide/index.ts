@@ -7,10 +7,10 @@ export default function (pi: ExtensionAPI) {
   const REPO_ROOT = path.resolve(path.dirname(HERE), "../..");
   const EXTENSIONS_DIR = path.join(REPO_ROOT, "extensions");
 
-  pi.on("before_agent_start", async (_event, ctx) => {
+  pi.on("before_agent_start", async (event) => {
     return {
       systemPrompt: [
-        ctx.systemPrompt,
+        event.systemPrompt,
         "",
         "## Extension Development",
         "",

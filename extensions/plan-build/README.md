@@ -1,21 +1,21 @@
 # Plan/Build Mode Extension for pi
 
-A multi-phase workflow for planning, reviewing, and executing code changes safely.
+A multi-phase workflow for planning, reviewing, and executing code changes.
 
 ## Overview
 
 Plan/Build mode adds a structured workflow to your pi sessions:
 
 ```
-PLAN (read-only)  →  REVIEW (TUI)  →  BUILD (full tools)  →  SUMMARY
+PLAN  →  REVIEW (TUI)  →  BUILD  →  SUMMARY
 ```
 
-| Phase | Tools | What happens |
-|-------|-------|-------------|
-| **Plan** | `read`, `bash`, `grep`, `find`, `ls`, `questionnaire` | Model explores codebase, asks clarifying questions, creates numbered plan |
-| **Review** | N/A (TUI) | Interactive inspection, editing, approval |
-| **Build** | All tools + `questionnaire` | Model executes steps with progress tracking |
-| **Summary** | N/A | Report of completed vs. remaining work |
+| Phase | What happens |
+|-------|-------------|
+| **Plan** | Model explores codebase, asks clarifying questions via the `questionnaire` tool, and creates a numbered plan. A context prompt nudges the model to focus on planning — no tool restrictions. |
+| **Review** | Interactive TUI to inspect, edit, enable/disable, reorder, and approve plan steps. |
+| **Build** | Model executes approved steps with `[DONE:n]` progress tracking. |
+| **Summary** | Report of completed vs. remaining work. |
 
 ## UI Indicators
 
@@ -34,7 +34,7 @@ If you have your own custom footer, the plan status chip still appears in the st
 
 ## Installation
 
-Copy `index.ts`, `types.ts`, `safety.ts`, `plan-parser.ts`, and `review-ui.ts` into:
+Copy `index.ts`, `types.ts`, `plan-parser.ts`, and `review-ui.ts` into:
 
 ```
 .pi/extensions/plan-build/
@@ -60,7 +60,7 @@ The `questionnaire` tool extension must also be installed for the LLM to ask cla
    ```
    Add user authentication to this Express app
    ```
-   The model will explore the codebase (read-only), possibly ask clarifying questions via the questionnaire tool, and create a numbered plan.
+   The model will explore the codebase, possibly ask clarifying questions via the questionnaire tool, and create a numbered plan. It will wait for your confirmation before making any changes.
 
 3. Review the plan in the interactive TUI:
    - Navigate with `↑/↓`
@@ -134,25 +134,6 @@ During the plan phase, the LLM can ask you clarifying questions using the `quest
 
 The questionnaire extension is a standalone extension at `.pi/extensions/questionnaire/`. It works everywhere, not just in plan mode.
 
-## Bash Safety (Plan Phase)
-
-During the plan phase, bash commands are restricted to a read-only allowlist:
-
-**Allowed (examples):**
-- File viewing: `cat`, `head`, `tail`, `less`
-- Search: `grep`, `rg`, `find`, `fd`
-- Directory: `ls`, `pwd`, `tree`
-- Git read: `git status`, `git log`, `git diff`
-- Package info: `npm list`, `pip list`
-- System info: `uname`, `ps`, `free`
-
-**Blocked:**
-- File modification: `rm`, `mv`, `cp`, `mkdir`, `touch`
-- Git write: `git add`, `git commit`, `git push`
-- Package install: `npm install`, `pip install`
-- Privileged: `sudo`, `kill`, `reboot`
-- Editors: `vim`, `nano`, `code`
-
 ## Plan Format
 
 The model should create a plan with a "Plan:" header and numbered steps:
@@ -182,7 +163,3 @@ Plan/build state is saved in session entries. This means:
 - Plan survives session resume (`/resume` or `pi -c`)
 - Tree navigation (`/tree`) restores correct state
 - Branching creates correct copies of plan state
-
-## Configuration
-
-Edit the safety patterns or behavior in `safety.ts` or extend via the extension system. See [pi extensions documentation](https://pi.dev/docs/extensions) for details.
