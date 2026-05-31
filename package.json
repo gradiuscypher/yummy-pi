@@ -1,0 +1,10 @@
+{
+  "name": "yummy-pi",
+  "version": "1.0.0",
+  "description": "A pi.dev extension pack with plan/build mode and questionnaire tools",
+  "keywords": ["pi-package"],
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
