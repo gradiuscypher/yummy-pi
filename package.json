@@ -1,6 +1,10 @@
 {
   "name": "yummy-pi",
   "version": "2.0.0",
-  "description": "My pi.dev setup: notes on the community packages I use",
-  "license": "MIT"
+  "description": "My pi.dev setup: the tmux-pane extension plus notes on the community packages I use",
+  "keywords": ["pi-package"],
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./extensions"]
+  }
 }
