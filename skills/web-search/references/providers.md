@@ -6,7 +6,7 @@ Provider availability and cost change. The router must use configured per-accoun
 |---|---|---|
 | Exa | [Search docs](https://exa.ai/docs) | Search and content retrieval; strong semantic/research-oriented use cases. |
 | Tavily | [Search API](https://docs.tavily.com/documentation/api-reference/endpoint/search) | Search depth and returned content can affect credits/cost. |
-| Scry | [Docs](https://scry.io/docs) | Confirm the account's endpoint, auth header, and pricing against current docs before production. |
+| Scry | [HTTP API](https://scry.io/docs/sql-over-https) | Dedicated corpus SQL tools, not web-search routing: public context, bearer-authenticated schema and text/plain SQL query at `https://api.scry.io/v1/scry/`. Requires `scry` + `read` key scopes; pricing/balance remain operator-maintained hints. |
 | Kagi Search | [API reference](https://kagi.com/api/docs/openapi) | Search API key and API billing are distinct from any consumer subscription; verify endpoint/auth configuration. |
 | Ceramic | [Search quickstart](https://docs.ceramic.ai/api/search/quickstart) | `POST https://api.ceramic.ai/search`, bearer key; docs currently describe 1,000 signup credits, which should not be assumed to remain on an account. |
 | Linkup | [Introduction](https://docs.linkup.so/pages/documentation/get-started/introduction) | Several endpoints/modes (Search, Fetch, Research); select based on task and check current tier pricing. |
@@ -23,7 +23,7 @@ At each tool call, consider only enabled providers with a usable credential. Cho
 4. If cost/credits are unknown, label them unknown and avoid claiming free. `allowUnknownCost: false` excludes them unless configured positive free credits are present. Zero free credits does not itself mean a provider is unavailable; known-cost paid use remains eligible.
 5. Try at most `routing.maxAttempts` providers sequentially (default 2), falling back only on errors or empty URL results. Explicit provider pins never fall back. For irrelevant results, change the query or explicitly choose another provider. The current config has no automatic spending/deep-mode approval mechanism; ask before using an unusually costly mode.
 
-Manual weights are non-negative routing preferences applied only after credit/cost ordering, never as a substitute for credentials or availability. `enabled: false` hard-disables a provider. Scry is excluded from eligibility because its adapter is not implemented. Keep provider implementation behind the common adapter interface so adding a backend does not require changing routing policy.
+Manual weights are non-negative routing preferences applied only after credit/cost ordering, never as a substitute for credentials or availability. `enabled: false` hard-disables a provider. Scry is excluded from web-search eligibility because its documented API uses corpus SQL; use `scry_context`, `scry_schema`, and `scry_query` explicitly. Keep provider implementation behind the common adapter interface so adding a backend does not require changing routing policy.
 
 ## Discovery versus retrieval
 

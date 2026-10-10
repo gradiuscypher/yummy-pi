@@ -88,7 +88,7 @@ export function providerStatus(cfg: Config, env: NodeJS.ProcessEnv = process.env
     const implemented = id !== "scry";
     const costAllowed = cfg.routing?.allowUnknownCost !== false || p.costPerSearchUsd != null || (p.freeCreditsRemaining ?? 0) > 0;
     const eligible = enabled && credentialPresent && implemented && costAllowed;
-    const reason = !enabled ? "disabled" : !implemented ? "adapter not implemented" : !credentialPresent ? "missing credential" : !costAllowed ? "unknown cost disallowed" : "eligible";
+    const reason = !enabled ? "disabled" : !implemented ? "dedicated SQL tools only" : !credentialPresent ? "missing credential" : !costAllowed ? "unknown cost disallowed" : "eligible";
     return { id, enabled, credentialPresent, implemented, eligible, reason,
       costPerSearchUsd: p.costPerSearchUsd ?? null, freeCreditsRemaining: p.freeCreditsRemaining ?? null,
       hintSource: "operator-maintained; not a live balance" };

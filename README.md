@@ -30,13 +30,30 @@ chmod 600 ~/.config/pi/web-search.json
 
 Override the path with `PI_WEB_SEARCH_CONFIG`. Keys stored in `apiKey` are secrets: keep this file owner-only (`chmod 600`), never commit it, and remember that copying it copies account credentials. Alternatively, `apiKeyEnv` names an environment variable (defaults are shown in the example). A provider is only eligible if implemented, enabled, credentialed, and permitted by cost policy. Set `enabled: false` to hard-disable it. `allowUnknownCost: false` excludes unknown-cost providers unless configured positive free credits are present. `maxAttempts` bounds sequential fallback (default 2); explicit provider pins never fall back. `freeCreditsRemaining` and `costPerSearchUsd` are manually maintained routing hints; usage checks query only verified read-only endpoints. `weight` nudges routing only after known credit/cost ordering; it never enables a disabled backend. `null` means unknown.
 
-**Adapter status:** Exa, Tavily, Kagi, Ceramic, Linkup, OpenAI web search, and OpenRouter web-search-model requests have initial adapters. Scry is disabled in the example and excluded from routing pending verification of its API endpoint/auth/response contract. Review provider docs and test each API before relying on it; APIs and search modes evolve. Provider-specific free credits are not inferred from plan names. OpenAI and OpenRouter search billing is separate from ordinary chat-plan assumptions.
+**Adapter status:** Exa, Tavily, Kagi, Ceramic, Linkup, OpenAI web search, and OpenRouter web-search-model requests have initial adapters. Scry has dedicated `scry_context`, `scry_schema`, and `scry_query` tools for its documented corpus SQL API; it is disabled in the example and excluded from automatic web-search routing. Review provider docs and test each API before relying on it; APIs and search modes evolve. Provider-specific free credits are not inferred from plan names. OpenAI and OpenRouter search billing is separate from ordinary chat-plan assumptions.
 
 Research workflow: `/skill:web-search`. Snippets and generated search answers are discovery aids, not verified evidence. The skill separates published offers, starting prices, market estimates, quote-only services and planning assumptions, and stops when remaining unknowns require scoped quotes rather than more browsing.
 
 Direct retrieval rejects private/reserved destinations and unsafe redirects, detects common interstitials, and bounds downloads/output. It does not execute JavaScript, parse PDFs or bypass CAPTCHA. See the [extension README](extensions/web-search/README.md) for limits and diagnostic counter semantics.
 
 Validation: `npm test` and `npm run typecheck` (search extension and tests).
+
+## Personal UI colors
+
+[`config/brighter-secondary-text.ts`](config/brighter-secondary-text.ts) is an opt-in customization for Pi's `system` theme:
+
+- Brighter footer/status notices and thinking text.
+- Slightly lighter blue user-message backgrounds.
+- Dark steely-teal completed tool blocks (`#004B4B` when Pi selects 256-color mode).
+
+It leaves normal message text, green text/accents, pending/error blocks, and general muted text unchanged. It temporarily wraps Pi's theme rendering methods and restores them on shutdown/reload. It selects `system` when the session starts and only adjusts that theme.
+
+```sh
+mkdir -p ~/.pi/agent/extensions
+cp config/brighter-secondary-text.ts ~/.pi/agent/extensions/brighter-secondary-text.ts
+```
+
+Run `/reload` to apply it. This file is intentionally outside the package's auto-loaded extensions to avoid loading it twice alongside the personal copy. The completed-block tint uses RGB escape sequences even when Pi selects 256-color mode: use an RGB-capable terminal path (including tmux). The local tmux client used to tune these colors advertises RGB support.
 
 ## Community packages
 

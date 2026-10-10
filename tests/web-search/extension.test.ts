@@ -30,16 +30,30 @@ test("registers research tools and a diagnostic command; status respects inactiv
   const previous = process.env.PI_WEB_SEARCH_CONFIG;
   try {
     const path = join(directory, "config.json");
-    await writeFile(path, JSON.stringify({ providers: { exa: { apiKey: "private-secret" } } }));
+    await writeFile(path, JSON.stringify({ providers: { exa: { apiKey: "private-secret" }, scry: { enabled: true, apiKey: "private-secret" } } }));
     process.env.PI_WEB_SEARCH_CONFIG = path;
     const { tools, commands, execute } = harness();
-    assert.deepEqual([...tools.keys()].sort(), ["web_search", "web_search_status", "web_search_usage", "web_fetch", "web_sitemap"].sort());
+    assert.deepEqual([...tools.keys()].sort(), ["web_search", "web_search_status", "web_search_usage", "web_fetch", "web_sitemap", "scry_context", "scry_schema", "scry_query"].sort());
     assert.deepEqual(commands, ["web-search-status"]);
     const status = await execute("web_search_status");
     assert.equal(status.tools.find((x: any) => x.name === "web_search").active, false);
     assert.equal(status.providers.find((x: any) => x.id === "exa").credentialPresent, true);
     assert.equal(status.statistics.toolCalls.web_search_status, 1);
     assert.ok(!JSON.stringify(status).includes("private-secret"));
+    assert.equal(status.capabilities.scry.queryAvailable, true);
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () => new Response(JSON.stringify({ rows: [{ title: "Corpus item" }], truncated: false }));
+      for (const [name, params] of [
+        ["scry_context", {}], ["scry_schema", { mode: "index" }], ["scry_query", { sql: "SELECT 1 LIMIT 1" }],
+      ] as const) {
+        const report = await execute(name, params);
+        assert.equal(report.provider, "scry");
+        assert.equal(report.evidenceKind, "unverified-corpus-data");
+      }
+      const afterScry = await execute("web_search_status");
+      assert.equal(afterScry.statistics.toolCalls.scry_query, 1);
+    } finally { globalThis.fetch = originalFetch; }
     await writeFile(path, '{"apiKey":"private-secret",');
     const invalid = await execute("web_search_status");
     assert.equal(invalid.configStatus, "invalid");

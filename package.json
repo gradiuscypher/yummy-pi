@@ -4,7 +4,7 @@
   "description": "My pi.dev setup: the tmux-pane extension plus notes on the community packages I use",
   "keywords": ["pi-package"],
   "license": "MIT",
-  "files": ["extensions", "skills", "config/search.example.json", "README.md", "LICENSE"],
+  "files": ["extensions", "skills", "config/search.example.json", "config/brighter-secondary-text.ts", "README.md", "LICENSE"],
   "scripts": {
     "test": "tsx --test tests/web-search/*.test.ts",
     "typecheck": "tsc --noEmit"

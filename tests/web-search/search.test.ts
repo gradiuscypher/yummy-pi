@@ -18,7 +18,7 @@ test("eligibility explains disabled, missing, unsupported and cost-policy exclus
   const reason = (id: string) => status.find(x => x.id === id)?.reason;
   assert.equal(reason("exa"), "disabled");
   assert.equal(reason("tavily"), "missing credential");
-  assert.equal(reason("scry"), "adapter not implemented");
+  assert.equal(reason("scry"), "dedicated SQL tools only");
   assert.equal(reason("kagi"), "unknown cost disallowed");
   assert.equal(reason("linkup"), "eligible");
   assert.ok(!JSON.stringify(status).includes("secret"));

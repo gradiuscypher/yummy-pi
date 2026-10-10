@@ -12,6 +12,9 @@ A Pi extension for bounded provider-routed source discovery, direct source retri
 | `web_fetch` | Fetch a public source, extract article/main/body text, and report retrieval status/metadata. No search key needed. |
 | `web_sitemap` | Find official page URLs through robots.txt and bounded XML sitemap-index traversal. No search key needed. |
 | `web_search_usage` | Check verified read-only usage endpoints; unsupported balances are unknown. |
+| `scry_context` | Get Scry's public compact corpus/query contract. |
+| `scry_schema` | Get authenticated relation/helper contracts, optionally by mode or relation. |
+| `scry_query` | Run a read-only SQL statement against Scry's corpus; preserve rows and accounting. |
 
 Example model tool arguments:
 
@@ -50,9 +53,27 @@ Routing considers only implemented, enabled, credentialed providers. Positive co
 | `timeoutMs` | `20000` | 1–120000 ms per provider attempt, including response consumption. |
 | `maxAttempts` | `2` | 1–8 sequential providers; fallback only on error/empty URL results. Pins use one provider. |
 
-Scry is deliberately unsupported and excluded from eligibility; the example disables it. Other adapters remain initial implementations; mock tests do not establish compatibility with every live API. OpenAI/OpenRouter results expose source citations and a separately labeled generated answer rather than raw JSON. See [provider notes](../../skills/web-search/references/providers.md).
+Scry uses dedicated SQL tools and is excluded from automatic web-search routing; the example disables it. Other adapters remain initial implementations; mock tests do not establish compatibility with every live API. OpenAI/OpenRouter results expose source citations and a separately labeled generated answer rather than raw JSON. See [provider notes](../../skills/web-search/references/providers.md).
 
 Provider HTTP errors do not echo response bodies, which can contain secrets. Configuration errors do not echo invalid values or JSON parser excerpts. Status exposes credential presence only. No automatic provider calls occur on extension load or when inspecting status. Search/usage requests can incur provider charges.
+
+## Scry corpus SQL
+
+Scry's documented API is SQL over a corpus, not a natural-language general web-search endpoint. The dedicated tools use `https://api.scry.io/v1/scry/context`, `/schema`, and `/query`. Enable `providers.scry.enabled` in your search config and set `SCRY_API_KEY` (or the existing inline/custom-env credential fields). Keys need `scry` plus `read` scopes and a verified account. Context is public and sends no credential; schema/query use bearer authentication.
+
+1. Call `scry_context` with `{}` and `scry_schema` with `{"mode":"index"}`.
+2. Fetch selected relation contracts with `{"relation":"hackernews.items"}`. With no arguments, schema returns primary contracts; `{"mode":"full"}` requests all contracts. Mode and relation are mutually exclusive.
+3. Call `scry_query` with a single read-only SQL statement and a literal `LIMIT` of at most 10,000; begin at `LIMIT 20`. Scry's server, not a local SQL parser, enforces these constraints.
+
+```json
+{"sql":"SELECT hn_id, title, uri FROM hackernews.items WHERE title != '' ORDER BY hn_id DESC LIMIT 20"}
+```
+
+Query calls can incur charges and respect `allowUnknownCost`; schema/context do not require cost hints. The legacy `costPerSearchUsd` and `freeCreditsRemaining` fields are operator-maintained allowances, not a Scry SQL price calculation or live balance. Status reports separate Scry context/schema/query availability under `capabilities.scry` while keeping Scry ineligible for `web_search`.
+
+Responses preserve the provider's rows, execution, truncation and accounting fields under `data`; they are unverified corpus data, not normalized search results. HTTP failures and errors inside streamed HTTP-200 JSON responses are sanitized. All requests have the configured timeout, reject redirects, and cap response bodies at 2 MiB (including streamed whitespace). Large accepted results use the existing private-temp-file output mechanism. There are no automatic retries, query translation, x402 payments, or requests on extension load. A timeout or failed reply does not establish that query execution/billing did not occur.
+
+API references: [HTTP API](https://scry.io/docs/sql-over-https), [agent setup/key scopes](https://scry.io/docs/agent-setup), [errors/streaming](https://scry.io/docs/errors). Mock tests do not constitute a live authenticated compatibility test.
 
 ## Retrieval and limits
 

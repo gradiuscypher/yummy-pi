@@ -56,7 +56,7 @@ export async function searchProvider(id: Provider, query: string, key: string, c
     case "ceramic": url = "https://api.ceramic.ai/search"; headers = { authorization: `Bearer ${key}` }; body = { query }; break;
     case "linkup": url = "https://api.linkup.so/v1/search"; headers = { authorization: `Bearer ${key}` }; body = { query, depth: "standard", outputType: "searchResults" }; break;
     case "kagi": url = "https://kagi.com/api/v0/search"; headers = { authorization: `Bot ${key}` }; body = undefined; break;
-    case "scry": throw new Error("Scry adapter is not implemented.");
+    case "scry": throw new Error("Scry uses dedicated SQL tools, not web-search routing.");
     case "openai": url = "https://api.openai.com/v1/responses"; headers = { authorization: `Bearer ${key}` }; body = { model: cfg.providers?.openai?.model ?? "gpt-4.1-mini", tools: [{ type: "web_search_preview" }], input: query }; break;
     case "openrouter": url = "https://openrouter.ai/api/v1/chat/completions"; headers = { authorization: `Bearer ${key}` }; body = { model: cfg.providers?.openrouter?.model ?? "perplexity/sonar", messages: [{ role: "user", content: query }] }; break;
   }
