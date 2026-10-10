@@ -1,0 +1,7 @@
+node_modules/
+
+# Private search credentials and local credential backups
+websearch.json
+websearch.json.back
+websearch.json.bak
+config/search.json

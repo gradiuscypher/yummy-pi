@@ -1,47 +1,52 @@
 # yummy-pi
 
-My [pi.dev](https://pi.dev) setup. Most of what used to live here was replaced
-by community packages; the one extension that has no equivalent is kept.
+My [pi.dev](https://pi.dev) setup.
 
 ## Local extension
 
 ### [tmux-pane](extensions/tmux-pane/)
 
-Lets Pi drive an existing tmux pane (for example an SSH session): send
-keystrokes, capture output, run commands. Gated behind `/tmux-on`.
+Lets Pi drive an existing tmux pane when explicitly armed with `/tmux-on`.
 
-No community package covers this: `@ogulcancelik/pi-tmux` only manages panes it
-creates itself, and `@getpipher/term` targets QA harnesses.
+### Web search
 
-### [provider-usage](extensions/provider-usage/)
+[`extensions/web-search/`](extensions/web-search/README.md) provides provider-routed search plus direct source retrieval and sitemap discovery. The companion [`web-search` skill](skills/web-search/SKILL.md) is included in the package, with [provider notes](skills/web-search/references/providers.md) and an [evidence ledger](skills/web-search/references/evidence.md).
 
-Footer status that follows the active model's provider. Session spend always;
-plus remaining OpenRouter credits (account balance, and the key's cap if it has
-one), or the ChatGPT subscription's 5-hour and weekly usage for `openai` and
-`openai-codex` models. Other providers show session spend only.
+- `web_search_status` and `/web-search-status`: tool registration/activation, safe provider eligibility, config diagnostics, and local efficiency counters—no network calls or exposed secrets.
+- `web_search`: normalized source URLs and provider-attempt reporting; default at most two sequential attempts, with fallback only on errors or empty URL results.
+- `web_fetch`: public page retrieval with final URL, HTTP/content status, readable article text and block warnings. No search key needed.
+- `web_sitemap`: bounded official sitemap discovery when searches or guessed links fail. No search key needed.
+- `web_search_usage`: verified read-only account endpoints where supported; other balances remain unknown.
 
-The subscription numbers are read with Pi's Codex login (`/login`, Codex),
-because the usage endpoint rejects the "Sign in with ChatGPT" token used by the
-`openai` provider. Models can stay on `openai`; the Codex login is only used
-for that one read-only call. Without it the footer shows session spend only, so
-the second login is optional per host. Add a provider by adding a `SOURCES`
-entry and mapping provider ids to it in `SOURCE_FOR_PROVIDER`.
+If the command is missing, load/install the extension and `/reload`; a config file alone cannot register tools. For development, run `npm ci` then `pi -e ./extensions/web-search/index.ts`. This extension does not supply a background-agent tool or force inactive tools into the model's loadout.
+
+Recommended per-user configuration: `~/.config/pi/web-search.json`. Copy [`config/search.example.json`](config/search.example.json) there, edit costs/credits/weights, and enter provider API keys in the `apiKey` fields if you want this file to be self-contained. Alternatively, set `apiKeyEnv` to an environment-variable name.
+
+```sh
+mkdir -p ~/.config/pi
+cp config/search.example.json ~/.config/pi/web-search.json
+chmod 600 ~/.config/pi/web-search.json
+```
+
+Override the path with `PI_WEB_SEARCH_CONFIG`. Keys stored in `apiKey` are secrets: keep this file owner-only (`chmod 600`), never commit it, and remember that copying it copies account credentials. Alternatively, `apiKeyEnv` names an environment variable (defaults are shown in the example). A provider is only eligible if implemented, enabled, credentialed, and permitted by cost policy. Set `enabled: false` to hard-disable it. `allowUnknownCost: false` excludes unknown-cost providers unless configured positive free credits are present. `maxAttempts` bounds sequential fallback (default 2); explicit provider pins never fall back. `freeCreditsRemaining` and `costPerSearchUsd` are manually maintained routing hints; usage checks query only verified read-only endpoints. `weight` nudges routing only after known credit/cost ordering; it never enables a disabled backend. `null` means unknown.
+
+**Adapter status:** Exa, Tavily, Kagi, Ceramic, Linkup, OpenAI web search, and OpenRouter web-search-model requests have initial adapters. Scry is disabled in the example and excluded from routing pending verification of its API endpoint/auth/response contract. Review provider docs and test each API before relying on it; APIs and search modes evolve. Provider-specific free credits are not inferred from plan names. OpenAI and OpenRouter search billing is separate from ordinary chat-plan assumptions.
+
+Research workflow: `/skill:web-search`. Snippets and generated search answers are discovery aids, not verified evidence. The skill separates published offers, starting prices, market estimates, quote-only services and planning assumptions, and stops when remaining unknowns require scoped quotes rather than more browsing.
+
+Direct retrieval rejects private/reserved destinations and unsafe redirects, detects common interstitials, and bounds downloads/output. It does not execute JavaScript, parse PDFs or bypass CAPTCHA. See the [extension README](extensions/web-search/README.md) for limits and diagnostic counter semantics.
+
+Validation: `npm test` and `npm run typecheck` (search extension and tests).
 
 ## Community packages
 
-Pi packages can't depend on other pi packages, so these are installed
-separately into your Pi settings:
+Pi packages can't depend on other pi packages, so these are installed separately into your Pi settings:
 
 ```bash
-pi install npm:@narumitw/pi-plan-mode               # /plan, read-only planning
-pi install npm:@juicesharp/rpiv-ask-user-question   # structured questions for the model
-pi install npm:@tmustier/pi-usage-extension         # token and cost dashboard
+pi install npm:@narumitw/pi-plan-mode
+pi install npm:@juicesharp/rpiv-ask-user-question
+pi install npm:@tmustier/pi-usage-extension
 ```
-
-How they were chosen: downloads, publish recency, and a static scan of each
-tarball (no install scripts; narrow use of exec, network and file access).
-Runners-up: `@plannotator/pi-extension` (browser plan review),
-`@mrclrchtr/supi-ask-user`, `pi-local-stats`.
 
 ## Install this repo
 

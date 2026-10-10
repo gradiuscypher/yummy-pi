@@ -1,0 +1,19 @@
+{
+  "providers": {
+    "exa": { "enabled": true, "apiKey": "", "apiKeyEnv": "EXA_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null },
+    "tavily": { "enabled": true, "apiKey": "", "apiKeyEnv": "TAVILY_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null },
+    "scry": { "enabled": false, "apiKey": "", "apiKeyEnv": "SCRY_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null },
+    "kagi": { "enabled": true, "apiKey": "", "apiKeyEnv": "KAGI_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null },
+    "ceramic": { "enabled": true, "apiKey": "", "apiKeyEnv": "CERAMIC_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null },
+    "linkup": { "enabled": true, "apiKey": "", "apiKeyEnv": "LINKUP_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null },
+    "openai": { "enabled": true, "apiKey": "", "apiKeyEnv": "OPENAI_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null, "model": "gpt-4.1-mini" },
+    "openrouter": { "enabled": true, "apiKey": "", "apiKeyEnv": "OPENROUTER_API_KEY", "weight": 1, "costPerSearchUsd": null, "freeCreditsRemaining": null, "model": "perplexity/sonar" }
+  },
+  "routing": {
+    "preferKnownFreeCredits": true,
+    "allowUnknownCost": true,
+    "maxResults": 8,
+    "timeoutMs": 20000,
+    "maxAttempts": 2
+  }
+}

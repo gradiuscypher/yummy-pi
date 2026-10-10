@@ -4,7 +4,29 @@
   "description": "My pi.dev setup: the tmux-pane extension plus notes on the community packages I use",
   "keywords": ["pi-package"],
   "license": "MIT",
+  "files": ["extensions", "skills", "config/search.example.json", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "tsx --test tests/web-search/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "fast-xml-parser": "^5.3.0",
+    "ipaddr.js": "^2.2.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typebox": "^1.0.0",
+    "typescript": "^5.9.0"
+  },
   "pi": {
-    "extensions": ["./extensions"]
+    "extensions": ["./extensions"],
+    "skills": ["./skills"]
   }
 }
