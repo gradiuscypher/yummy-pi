@@ -1,6 +1,9 @@
 import { Theme, type ExtensionAPI, type ThemeBg, type ThemeColor, type ThemeStyle } from "@earendil-works/pi-coding-agent";
 import { backgroundAnsi, colorToOklch, foregroundAnsi, indexedColor, mixColors, oklchColor, rgbColor, type Color } from "@earendil-works/pi-tui";
 
+const PATCH_STATE = Symbol.for("yummy-pi:ui-colors:patch");
+type PatchState = { users: number; restore: () => void };
+
 // Preserve the terminal-adaptive system palette, with brighter secondary UI text
 // and a subtly cooler, less saturated background for successful tool blocks.
 // User-message backgrounds are a little lighter, but remain blue.
@@ -14,6 +17,20 @@ export default function (pi: ExtensionAPI) {
     if (ctx.mode !== "tui" || restore) return;
 
     const prototype = Theme.prototype;
+    const existing: PatchState | undefined = Object.getOwnPropertyDescriptor(prototype, PATCH_STATE)?.value;
+    const release = (state: PatchState) => {
+      restore = () => {
+        restore = undefined;
+        if (--state.users === 0) state.restore();
+      };
+    };
+    // Package copies and a migrated personal copy share the host Theme class.
+    // Apply the wrappers once, and keep them until the last owner shuts down.
+    if (existing) {
+      existing.users++;
+      release(existing);
+      return;
+    }
     const originalFg = prototype.fg;
     const originalBg = prototype.bg;
     const originalStyle = prototype.style;
@@ -92,15 +109,20 @@ export default function (pi: ExtensionAPI) {
       return color ? backgroundEscape(this, token, color) : originalGetBgAnsi.call(this, token);
     };
 
-    restore = () => {
-      prototype.fg = originalFg;
-      prototype.bg = originalBg;
-      prototype.style = originalStyle;
-      prototype.getFgAnsi = originalGetFgAnsi;
-      prototype.getBgAnsi = originalGetBgAnsi;
-      restore = undefined;
+    const state: PatchState = {
+      users: 1,
+      restore: () => {
+        prototype.fg = originalFg;
+        prototype.bg = originalBg;
+        prototype.style = originalStyle;
+        prototype.getFgAnsi = originalGetFgAnsi;
+        prototype.getBgAnsi = originalGetBgAnsi;
+        Reflect.deleteProperty(prototype, PATCH_STATE);
+      },
     };
-    // Request the normal theme invalidation/render without changing palettes.
+    Object.defineProperty(prototype, PATCH_STATE, { value: state, configurable: true });
+    release(state);
+    // Select the terminal-adaptive palette and request normal theme rendering.
     ctx.ui.setTheme("system");
   });
 

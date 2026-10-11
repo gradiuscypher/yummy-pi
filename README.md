@@ -38,22 +38,25 @@ Direct retrieval rejects private/reserved destinations and unsafe redirects, det
 
 Validation: `npm test` and `npm run typecheck` (search extension and tests).
 
-## Personal UI colors
+## UI colors
 
-[`config/brighter-secondary-text.ts`](config/brighter-secondary-text.ts) is an opt-in customization for Pi's `system` theme:
+[`extensions/ui-colors/`](extensions/ui-colors/index.ts) loads automatically with yummy-pi in interactive sessions and selects Pi's terminal-adaptive `system` theme with our color adjustments:
 
 - Brighter footer/status notices and thinking text.
 - Slightly lighter blue user-message backgrounds.
 - Dark steely-teal completed tool blocks (`#004B4B` when Pi selects 256-color mode).
 
-It leaves normal message text, green text/accents, pending/error blocks, and general muted text unchanged. It temporarily wraps Pi's theme rendering methods and restores them on shutdown/reload. It selects `system` when the session starts and only adjusts that theme.
+It leaves normal message text, green text/accents, pending/error blocks, and general muted text unchanged. It temporarily wraps Pi's theme rendering methods and restores them on shutdown/reload. It selects `system` when the session starts and only adjusts that theme; choosing another theme through `/settings` leaves that theme unchanged. Print, JSON, and RPC sessions are unaffected.
+
+No separate theme installation or personal extension copy is needed. For an existing installation, update the package and reload:
 
 ```sh
-mkdir -p ~/.pi/agent/extensions
-cp config/brighter-secondary-text.ts ~/.pi/agent/extensions/brighter-secondary-text.ts
+pi update git:github.com/gradiuscypher/yummy-pi
 ```
 
-Run `/reload` to apply it. This file is intentionally outside the package's auto-loaded extensions to avoid loading it twice alongside the personal copy. The completed-block tint uses RGB escape sequences even when Pi selects 256-color mode: use an RGB-capable terminal path (including tmux). The local tmux client used to tune these colors advertises RGB support.
+Then run `/reload`. If you previously copied `config/brighter-secondary-text.ts` to `~/.pi/agent/extensions/brighter-secondary-text.ts`, remove that old personal copy after updating the package so the bundled extension is the only source. New copies share a single rendering patch and safely release it when the last copy shuts down.
+
+The completed-block tint uses RGB escape sequences even when Pi selects 256-color mode: use an RGB-capable terminal path (including tmux). The local tmux client used to tune these colors advertises RGB support. To opt out, disable `extensions/ui-colors/index.ts` in `pi config`.
 
 ## Community packages
 
