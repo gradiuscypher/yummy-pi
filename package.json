@@ -2,11 +2,20 @@
   "name": "yummy-pi",
   "version": "2.0.0",
   "description": "My pi.dev setup: the tmux-pane extension plus notes on the community packages I use",
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package"
+  ],
   "license": "MIT",
-  "files": ["extensions", "skills", "config/search.example.json", "README.md", "LICENSE"],
+  "files": [
+    "extensions",
+    "omp-extensions",
+    "skills",
+    "config/search.example.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "tsx --test tests/web-search/*.test.ts tests/ui-colors/*.test.mts",
+    "test": "tsx --test tests/web-search/*.test.ts tests/ui-colors/*.test.mts tests/openrouter-balance/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,13 +30,21 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.1.0",
+    "@oh-my-pi/pi-coding-agent": "^18.10.4",
     "@types/node": "^22.0.0",
     "tsx": "^4.20.0",
     "typebox": "^1.0.0",
     "typescript": "^5.9.0"
   },
+  "omp": {
+    "extensions": ["./omp-extensions/openrouter-balance/index.ts"]
+  },
   "pi": {
-    "extensions": ["./extensions"],
-    "skills": ["./skills"]
+    "extensions": [
+      "./extensions"
+    ],
+    "skills": [
+      "./skills"
+    ]
   }
 }

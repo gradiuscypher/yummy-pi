@@ -58,6 +58,37 @@ Then run `/reload`. If you previously copied `config/brighter-secondary-text.ts`
 
 The completed-block tint uses RGB escape sequences even when Pi selects 256-color mode: use an RGB-capable terminal path (including tmux). The local tmux client used to tune these colors advertises RGB support. To opt out, disable `extensions/ui-colors/index.ts` in `pi config`.
 
+## omp: OpenRouter balance footer
+
+[`omp-extensions/openrouter-balance/index.ts`](omp-extensions/openrouter-balance/index.ts) is an omp-only extension. The package's separate `omp.extensions` manifest loads it without loading the Pi extensions; Pi continues using `pi.extensions`.
+
+Try it from this checkout:
+
+```sh
+omp -e ./omp-extensions/openrouter-balance/index.ts
+```
+
+Or link the package for future omp sessions:
+
+```sh
+omp plugin link .
+```
+
+Restart omp after linking. Select an OpenRouter model and run `/openrouter-balance` to force a refresh. With the default `statusLine.showHookStatus: true`, balances appear in the footer. For a custom status line that hides hook statuses, include `status` in `statusLine.leftSegments` or `statusLine.rightSegments`. The existing `usage` segment remains responsible for subscription quotas.
+
+The display separates:
+
+- **Account:** purchased credits minus account usage, from `GET /api/v1/credits`.
+- **Key:** the active inference key's reported `limit_remaining`, from `GET /api/v1/key`. An explicitly uncapped key is labeled `uncapped`; this does not mean unlimited account credits or exemption from other budgets.
+
+OpenRouter's [credits endpoint](https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits) currently requires a management key. To enable the account figure, supply `OPENROUTER_MANAGEMENT_KEY` in the environment inherited by omp. It must belong to the same OpenRouter account as the inference key; the extension cannot independently verify that association. Treat this as a privileged secret: do not commit it, paste it into chat, or put it in a shell command that will be saved in history. This extension only sends it to the credits endpoint using GET, but the key itself may authorize management operations elsewhere. Without it, account credits are explicitly unavailable and the key allowance still works.
+
+The inference key is resolved through omp's session-aware model registry, including its pinned/rotated account. No duplicated inference credential configuration is needed. Requests go only to OpenRouter's fixed HTTPS endpoints, reject redirects, and time out after five seconds. Errors never display response bodies or credential values. See the [current-key API](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key).
+
+Balances refresh on startup and turn completion, or at most once per minute while idle. A managed five-second check detects model/credential changes; the footer is hidden outside the main interactive OpenRouter session. Cache state is cleared on credential/session changes and shutdown, and is never persisted. Each figure updates independently. Failed refreshes preserve the last successful value with `[stale]`; values at least two minutes old are also marked stale. The extension adds no model tools, makes no completion requests, and does not change provider configuration or subscription usage reporting.
+
+Validation: `npm test` includes balance parsing, separate credential use, partial failures, secret-safe errors, and stale-state recovery. `npm run typecheck` includes the omp extension.
+
 ## Community packages
 
 Pi packages can't depend on other pi packages, so these are installed separately into your Pi settings:
